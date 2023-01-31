@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 
 def select_todos_usuarios(con):
     cursor = con.cursor()
-    sql = "SELECT * FROM leiloes"
+    sql = "SELECT * FROM leilao"
     cursor.execute(sql)
 
 #remover duplicatas
@@ -39,9 +39,19 @@ def main():
     tabela['dataleilao'] = tabela['nome'].str.split("@", n=1, expand=True)[1]
     tabela['nome'] = tabela['nome'].str.split("@", n=1, expand=True)[0]
     tabela['dataleilao'] = pd.to_datetime(tabela['dataleilao'], format='%d%m%Y')
-    tabela["OBS"] = tabela["nome"].isin(df["nome"]).apply(lambda x: "sem OBS" if x else "com OBS")
+    df.drop_duplicates(subset=['nome', 'dataleilao'], keep=False, inplace=True)
+    count = 0
+    
+    for nomes in df:
+            count +=1
+    if nomes in df:
+            tabela["OBS"] = tabela["nome"].isin(df["nome"]).apply(lambda y: "sem OBS" if y else "com OBS")
+            df["OBS"] = df["dataleilao"].isin(tabela["dataleilao"]).apply(lambda y: "sem OBS" if y else "com OBS")
+            
+
     mauricio = df.merge(tabela, right_index=True, left_index=True, how='outer')
     print(mauricio)
+
 
 
 if __name__ == "__main__":
