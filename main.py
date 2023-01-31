@@ -6,38 +6,43 @@ from sqlalchemy import create_engine
 
 def select_todos_usuarios(con):
     cursor = con.cursor()
-    sql = "SELECT * FROM leilao"
+    sql = "SELECT * FROM leiloes"
     cursor.execute(sql)
 
-    for (id, nome) in cursor:
-        print(id, nome)
-    
+#remover duplicatas
+
+    resultado = []
+    dicionario = {}
+
+    for (id, nome, dataleilao) in cursor:
+        chave = (nome, dataleilao)
+        if chave not in dicionario:
+            dicionario[chave] = True
+            resultado.append((id, nome, dataleilao))
+
     cursor.close()
+    return resultado
 
 
 def main():
-    con = criar_conexao("localhost", "root", "", "leiloes")
+    con = criar_conexao("localhost", "root", "", "leilao")
 
-    select_todos_usuarios(con)
+    resultado = select_todos_usuarios(con)
 
     fechar_conexao(con)
+
+    df = pd.DataFrame(resultado, columns=['id', 'nome', 'dataleilao'])
+    df.to_excel('Lotes.xlsx', index=False)
+
+
+    tabela = pd.read_excel("planilha2.xlsx")
+    tabela['dataleilao'] = tabela['nome'].str.split("@", n=1, expand=True)[1]
+    tabela['nome'] = tabela['nome'].str.split("@", n=1, expand=True)[0]
+    tabela['dataleilao'] = pd.to_datetime(tabela['dataleilao'], format='%d%m%Y')
+    tabela["OBS"] = tabela["nome"].isin(df["nome"]).apply(lambda x: "sem OBS" if x else "com OBS")
+    mauricio = df.merge(tabela, right_index=True, left_index=True, how='outer')
+    print(mauricio)
 
 
 if __name__ == "__main__":
     main()
-
-
-engine = create_engine("mysql+pymysql://root:@localhost:3306/leiloes")
-conn = engine.connect()
-
-sql_query = pd.read_sql_query ("SELECT * FROM leilao", conn)
-
-df = pd.DataFrame(sql_query)
-df.to_excel('Lotes.xlsx', index = False)
-
-
-tabela = pd.read_excel("planilha2.xlsx")
-print(tabela)
-
-mauricio = df.merge(tabela, right_index=True, left_index=True, how='outer')
-print(mauricio)
